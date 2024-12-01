@@ -185,7 +185,7 @@ const ProductDetails = () => {
         </div>
         <h3 className="pDescTitle">Offers</h3>
         <ul type="none">
-          <li>Use &apos;SUMILSUTHAR197&apos; to avail flat 20% Off</li>
+          <li>Use &apos;NEWCOMER&apos; to avail flat 20% Off</li>
         </ul>
         <RatingContainer ratings={data.ratings} />
       </div>

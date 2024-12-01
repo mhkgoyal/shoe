@@ -119,6 +119,5 @@ Follow these steps to set up Shoekart on your local machine:
 
     After running this command, the project will start running locally at http://localhost:5173
 
-## Authors
 
-Made with ❤️ by **[Sumil Suthar](https://sumilsuthar.me/)**
+

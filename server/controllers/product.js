@@ -102,12 +102,13 @@ const getProduct = asyncErrorHandler(async (req, res, next) => {
 });
 
 const createProduct = asyncErrorHandler(async (req, res, next) => {
+  console.log(req.body);
   const {
     sku,
     name,
     brand,
     image,
-    desc,
+    description,
     price,
     sizeQuantity,
     color,
@@ -121,7 +122,7 @@ const createProduct = asyncErrorHandler(async (req, res, next) => {
     !name ||
     !brand ||
     !image ||
-    !desc ||
+    !description ||
     !price ||
     !color ||
     !material ||
@@ -136,12 +137,13 @@ const createProduct = asyncErrorHandler(async (req, res, next) => {
     return next(new errorHandler("Product already exists", 400));
   }
 
-  await product.create({
+  // Create the product
+  const newProduct = await product.create({
     sku,
     name,
     brand,
     image,
-    description: desc,
+    description,
     price,
     sizeQuantity,
     color,
@@ -150,16 +152,24 @@ const createProduct = asyncErrorHandler(async (req, res, next) => {
     isFeatured: featured,
   });
 
+  // Find the brand and update its totalProducts
   const productBrand = await brands.findOne({ name: brand });
-  productBrand.totalProducts += 1;
-  productBrand.activeProducts += 1;
-  await productBrand.save();
+
+  if (productBrand) {
+    productBrand.totalProducts += 1;
+    productBrand.activeProducts += 1;
+    await productBrand.save();
+  } else {
+    // If the brand doesn't exist, you can create a new brand or handle it as an error
+    return next(new errorHandler("Brand does not exist", 404));
+  }
 
   res.status(201).json({
     success: true,
     message: "Product created successfully",
   });
 });
+
 
 const updateProduct = asyncErrorHandler(async (req, res, next) => {
   const { slug } = req.params;
@@ -168,7 +178,7 @@ const updateProduct = asyncErrorHandler(async (req, res, next) => {
     name,
     brand,
     image,
-    desc,
+    description,
     price,
     sizeQuantity,
     color,
@@ -182,7 +192,7 @@ const updateProduct = asyncErrorHandler(async (req, res, next) => {
     !name ||
     !brand ||
     !image ||
-    !desc ||
+    !description ||
     !price ||
     !color ||
     !material ||
@@ -201,7 +211,7 @@ const updateProduct = asyncErrorHandler(async (req, res, next) => {
   productExists.name = name;
   productExists.brand = brand;
   productExists.image = image;
-  productExists.description = desc;
+  productExists.description = description;
   productExists.price = price;
   productExists.sizeQuantity = sizeQuantity;
   productExists.color = color;

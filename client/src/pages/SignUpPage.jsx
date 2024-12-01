@@ -13,27 +13,35 @@ const SignUpPage = () => {
     role: "user",
     name: "",
   });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log("Submitting user data:", user);
       const response = await Axios.post("/register", user);
-      console.log(response);
+      console.log("Response from server:", response);
+
       if (response.data.success === true) {
-        toast.success("Account created successfully ", {
+        toast.success("Account created successfully", {
           position: "bottom-right",
         });
         navigate("/login");
       } else {
-        toast.error(response.data.message, {
+        toast.error(response.data.message || "Signup failed", {
           position: "bottom-right",
         });
       }
     } catch (error) {
-      toast.error(error.response.data.message || "Something went wrong", {
-        position: "bottom-right",
-      });
+      console.error("Error details:", error.response);
+      toast.error(
+        error.response?.data?.message || "Something went wrong. Please try again.",
+        {
+          position: "bottom-right",
+        }
+      );
     }
   };
+
   return (
     <div className="login-page">
       <div className="login-div div1">
@@ -86,11 +94,7 @@ const SignUpPage = () => {
                 placeholder="Enter your password"
               />
             </div>
-            <button
-              onClick={handleSubmit}
-              className="login-button"
-              type="submit"
-            >
+            <button className="login-button" type="submit">
               Create Account
             </button>
           </form>
@@ -104,3 +108,4 @@ const SignUpPage = () => {
 };
 
 export default SignUpPage;
+

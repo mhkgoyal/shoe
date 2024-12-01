@@ -30,7 +30,6 @@ const getAllUsers = asyncErrorHandler(async (req, res) => {
 });
 
 const getAllOrders = asyncErrorHandler(async (req, res) => {
-  console.log("orders");
   const { page, limit } = req.query;
   const orders = await order
     .find()
@@ -112,30 +111,34 @@ const getCoupons = asyncErrorHandler(async (req, res) => {
 });
 
 const createCoupon = asyncErrorHandler(async (req, res) => {
-  const {
-    name,
-    discount: percent_off,
-    duration,
-    duration_in_months,
-    max_redemptions,
-  } = req.body.formData;
-  const couponData = {
-    id: name.toUpperCase(),
-    name: name.toUpperCase(),
-    duration: duration === "forever" ? "forever" : "repeating",
-    percent_off,
-    max_redemptions,
-  };
+  try {
+    const { name, discount: percent_off, duration, duration_in_months, max_redemptions } = req.body.formData;
+    const couponData = {
+      id: name.toUpperCase(),
+      name: name.toUpperCase(),
+      duration: duration === "forever" ? "forever" : "repeating",
+      percent_off,
+      max_redemptions,
+    };
 
-  if (duration !== "forever") {
-    couponData.duration_in_months = duration_in_months;
+    if (duration !== "forever") {
+      couponData.duration_in_months = duration_in_months;
+    }
+
+    const coupon = await stripe.coupons.create(couponData);
+    res.status(200).json({
+      success: true,
+      message: "Coupon created successfully.",
+      coupon,
+    });
+  } catch (error) {
+    console.error("Stripe error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to create coupon.",
+      error: error.message,
+    });
   }
-
-  await stripe.coupons.create(couponData);
-  res.status(200).json({
-    success: true,
-    message: "Coupon created successfully.",
-  });
 });
 
 const deleteCoupon = asyncErrorHandler(async (req, res) => {
@@ -183,41 +186,35 @@ const getAllProducts = asyncErrorHandler(async (req, res) => {
 const productStatus = asyncErrorHandler(async (req, res) => {
   const currentProduct = await product.findById(req.params.id);
   const productBrand = await brands.findOne({ name: currentProduct.brand });
-  productBrand.activeProducts += currentProduct.isActive ? -1 : 1;
+
+  // Use findOneAndUpdate to atomically update the brand's activeProducts
+  await brands.findOneAndUpdate(
+    { name: currentProduct.brand },
+    { $inc: { activeProducts: currentProduct.isActive ? -1 : 1 } }
+  );
+
   currentProduct.isActive = !currentProduct.isActive;
   await currentProduct.save();
-  await productBrand.save();
+
   res.status(200).json({
     success: true,
     message: "Product status updated successfully.",
   });
 });
 
+
 const getAdminDetails = asyncErrorHandler(async (req, res) => {
   const label1 = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
   ];
   const data1 = [];
   const label2 = ["Pending", "Delivered", "Cancelled"];
   const data2 = [];
   const now = new Date();
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const firstDayOfNextMonth = new Date(
-    now.getFullYear(),
-    now.getMonth() + 1,
-    1
-  );
+  const firstDayOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  // Aggregating total sales per month
   const ordersData = await order.aggregate([
     {
       $match: {
@@ -245,6 +242,7 @@ const getAdminDetails = asyncErrorHandler(async (req, res) => {
     }
   });
 
+  // Aggregating order status data for current month
   const orderUpdate = await order.aggregate([
     {
       $match: {
@@ -273,34 +271,46 @@ const getAdminDetails = asyncErrorHandler(async (req, res) => {
       data2.push(0);
     }
   });
+
+  // Fetching total counts and total sales
   const totalUsers = await user.countDocuments({ role: "user" });
   const totalOrders = await order.countDocuments();
   const totalProducts = await product.countDocuments();
   const totalSales = await order.aggregate([
     {
+      $match: {
+        createdAt: { $gte: new Date(new Date().getFullYear(), 0, 1) },
+      },
+    },
+    {
       $group: {
         _id: null,
-        total: { $sum: "$total" },
+        totalSales: { $sum: "$total" },
       },
     },
   ]);
+
+  const totalSalesAmount = totalSales[0]?.totalSales || 0; // Ensure fallback to 0 if no sales found
+
+
   res.status(200).json({
     success: true,
-    bar1: { labels: label1, data: data1 },
-    bar2: { labels: label2, data: data2 },
+    data1,
+    data2,
     totalUsers,
     totalOrders,
     totalProducts,
-    totalSales: totalSales[0].total.toFixed(2),
+    totalSales: totalSalesAmount.toFixed(2),
   });
 });
+
 module.exports = {
   getAllUsers,
+  getAllOrders,
+  updateOrderStatus,
   getCoupons,
   createCoupon,
   deleteCoupon,
-  getAllOrders,
-  updateOrderStatus,
   getAllProducts,
   productStatus,
   getAdminDetails,

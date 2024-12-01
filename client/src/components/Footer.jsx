@@ -131,16 +131,6 @@ const Footer = () => {
           </div>
           <div className="copyrightText">
             <p>Copyright ©{new Date().getFullYear()} Shoekart</p>
-            <p>
-              Made By{" "}
-              <Link
-                to="https://sumilsuthar.me/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Sumil Suthar
-              </Link>
-            </p>
           </div>
         </div>
       </section>
